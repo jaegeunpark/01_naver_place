@@ -1,33 +1,38 @@
-import logging
-
+import os
 import pandas as pd
+from datetime import datetime
 
-from src import config
-
-
-def save_to_excel(data, filename):
+def save_to_excel(data_list, keyword):
     """
-    [기존 유지] 단일 리스트 데이터를 엑셀로 저장하는 함수
+    수집된 데이터를 지정된 output 폴더 안에 엑셀 파일로 저장하는 함수
     """
-    file_path = config.OUTPUT_DIR / filename
-    df = pd.DataFrame(data)
-    df.to_excel(file_path, index=False)
-    logging.info(f"📁 단일 엑셀 파일 저장 완료: {file_path}")
+    if not data_list:
+        print("⚠️ 저장할 데이터가 없어 엑셀 저장을 건너뜁니다.")
+        return
 
-def save_to_excel_multi_sheets(data_dict, filename):
-    """
-    [⚡ Phase 2 - 2일차] 딕셔너리 형태의 데이터를 받아 하나의 엑셀 파일에 멀티 시트로 저장하는 함수
-    :param data_dict: {"시트명1": [데이터리스트], "시트명2": [데이터리스트]} 구조
-    """
-    file_path = config.OUTPUT_DIR / filename
+    print("\n📊 수집된 데이터를 엑셀로 변환하는 중...")
 
-    # 💡 Pandas의 ExcelWriter를 오픈합니다. (자바의 try-with-resources 구문과 같은 with 사용)
-    with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-        for sheet_name, data_list in data_dict.items():
-            # 1. 데이터를 판다스 DataFrame으로 변환
-            df = pd.DataFrame(data_list)
-            # 2. 지정한 시트 이름으로 엑셀에 써내려갑니다.
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
-            logging.info(f"   ↳ [Excel] '{sheet_name}' 시트에 {len(data_list)}개 행 저장 완료")
+    # 💥 [통일성 추가] output 폴더가 없으면 자동으로 생성하는 로직
+    output_dir = "output"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"📁 [{output_dir}] 폴더가 존재하지 않아 새로 생성했습니다.")
 
-    logging.info(f"📁 멀티 시트 엑셀 파일 저장 완료: {file_path}")
+    # 1. 딕셔너리 리스트를 Pandas 데이터프레임(표 구조)으로 변환
+    df = pd.DataFrame(data_list)
+
+    # 2. 저장할 파일명 생성
+    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_keyword = keyword.replace(" ", "_")
+    filename = f"{safe_keyword}_{current_time}.xlsx"
+
+    # 💥 [경로 결합] output/파일명.xlsx 형태로 경로를 묶어줍니다.
+    filepath = os.path.join(output_dir, filename)
+
+    # 3. 지정된 경로로 엑셀 파일 내보내기 (인덱스 제외)
+    df.to_excel(filepath, index=False)
+
+    # 4. 저장된 절대 경로 출력
+    absolute_path = os.path.abspath(filepath)
+    print(f"💾 [대성공] 엑셀 파일 저장 완료!")
+    print(f"📂 파일 경로: {absolute_path}")
